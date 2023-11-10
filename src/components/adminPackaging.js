@@ -149,7 +149,6 @@ const AdminPackaging = () => {
                     ))}
                 </select>
             </label>
-
             <label>
                 Usuario:
                 <select value={selectedUserId} onChange={handleUserChange}>
