@@ -1,32 +1,34 @@
 # Importa los módulos y objetos necesarios
 import os
 from flask import jsonify, request
+from datetime import timedelta
 from werkzeug.utils import secure_filename
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
 from models import User,Categorias, Productos,MesesProduccion , Packagings   # Importa el modelo de usuario (ajusta el nombre según tu configuración)
 from app import app, db, bcrypt, flash,redirect
 from util import allowed_file  # Importa la función allowed_file desde util.py
 from flask import send_from_directory
 
 
+
+# Registro de usuario
 # Registro de usuario
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    email = data.get('email')  # Asegúrate de que estás recibiendo el email del formulario
 
-    # Verifica si el usuario ya existe en la base de datos (por ejemplo, busca por nombre de usuario)
+    # Verifica si el usuario ya existe en la base de datos
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
         return jsonify({'message': 'El usuario ya existe'}), 400
 
-    # Hashea la contraseña antes de guardarla en la base de datos
-    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+    # Crea un nuevo usuario y establece la contraseña utilizando el método set_password
+    # Pasa también el argumento 'is_admin' a la inicialización del modelo como 'admin' si está presente, de lo contrario, 'user'
+    new_user = User(username=username, password=password, is_admin=data.get('is_admin', 'admin'))
 
-    # Crea un nuevo usuario y guárdalo en la base de datos
-    new_user = User(username=username, email=email, password=hashed_password)
+    # Guarda el nuevo usuario en la base de datos
     db.session.add(new_user)
     db.session.commit()
 
@@ -40,11 +42,9 @@ def get_users():
 
     # Serializa la información de los usuarios (devuelve solo id y username)
     serialized_users = [{'id': user.id, 'username': user.username} for user in users]
-
     return jsonify({'users': serialized_users})
 
 
-# Inicio de sesión y emisión de token JWT
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -53,11 +53,40 @@ def login():
 
     # Verifica las credenciales del usuario
     user = User.query.filter_by(username=username).first()
-    if not user or not bcrypt.check_password_hash(user.password, password):
+    if not user or not user.check_password(password):
         return jsonify({'message': 'Credenciales inválidas'}), 401
 
-    access_token = create_access_token(identity=username)
+    # Genera un token de acceso con Flask-JWT-Extended
+    access_token = create_access_token(identity={
+        'username': username,
+        'is_admin': user.is_admin
+    }, expires_delta=timedelta(days=1))
+
+    print("Token obtenido:", access_token)
+
     return jsonify(access_token=access_token)
+
+
+
+# Proteja una ruta con jwt_required, que eliminará las solicitudes
+# sin un JWT válido presente.
+@app.route("/validate-token", methods=["GET"])
+@jwt_required()
+def get_info_profile():
+    try:
+        # Access the identity of the current user with get_jwt_identity
+        current_user = get_jwt_identity()
+        #user = User.query.filter_by(email=current_user).first()
+
+        # Añadir más información relacionada con el usuario si es necesario
+        user_info = {"username": current_user, "isLogged": True}
+        return jsonify(user_info), 200
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 422
 
 
 # Ruta protegida que requiere autenticación
@@ -66,6 +95,23 @@ def login():
 def protected():
     current_user = get_jwt_identity()
     return jsonify(logged_in_as=current_user)
+
+
+# Logout (Cerrar sesión)
+@app.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # Obtén la identidad del usuario actual
+    current_user = get_jwt_identity()
+
+    # Puedes realizar más acciones de logout aquí si es necesario
+
+    # Elimina las cookies JWT para cerrar la sesión
+    response = jsonify({'message': 'Logout exitoso'})
+    unset_jwt_cookies(response)
+    
+    return response, 200
+
 
 
 @app.route('/upload', methods=['POST'])
@@ -93,7 +139,18 @@ def uploaded_file(filename):
 
 
 @app.route('/upload_category', methods=['POST'])
+@jwt_required()
 def upload_category():
+    # Obtén el usuario actual
+    user_identity = get_jwt_identity()
+    current_user = User.query.filter_by(username=user_identity['username'], is_admin=str(user_identity['is_admin'])).first()
+
+    if not current_user:
+        return jsonify({'message': 'Acceso no autorizado'}), 403
+
+    if current_user.is_admin != 'admin':
+        return jsonify({'message': 'Acceso no autorizado para usuarios no administradores'}), 403
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
 
@@ -133,6 +190,7 @@ def get_categories():
         category_list.append(category_data)
 
     return jsonify(categories=category_list)
+
 
 
 @app.route('/categories/<int:category_id>/edit', methods=['PUT'])

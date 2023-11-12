@@ -1,37 +1,30 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useContext } from 'react';
+import { Context } from '../store/appContext'; // Ajusta la ruta según la estructura de tu proyecto
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
+  const { actions } = useContext(Context); // Asegúrate de utilizar el nombre correcto de tu contexto
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await axios.post('http://localhost:5000/login', {
-        username, // Se asume que el campo de correo electrónico se utiliza como nombre de usuario
-        password,
-      });
+      const userData = {
+        username: username,
+        password: password,
+      };
 
-      if (response.status === 200) {
-        const data = response.data;
-        // Aquí puedes manejar el token JWT, por ejemplo, guardándolo en el estado o en localStorage.
-        console.log('Token:', data.access_token);
-      }
+      await actions.login(userData);
+      // Después del inicio de sesión, puedes redirigir al usuario a otra página o realizar otras acciones necesarias.
     } catch (error) {
-      if (error.response) {
-        // La solicitud fue hecha y el servidor respondió con un código de estado fuera del rango 2xx
-        const errorData = error.response.data;
-        setMessage(errorData.message || 'Credenciales inválidas');
-      } else {
-        // La solicitud fue hecha pero no se recibió respuesta
-        console.error('Error:', error.message);
-        setMessage('Error en la autenticación');
-      }
+      console.error("Error during login:", error);
+      setMessage("Credenciales inválidas");
     }
   };
+
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">

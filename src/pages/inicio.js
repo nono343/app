@@ -19,9 +19,7 @@ export default function Inicio() {
             .catch((error) => {
                 console.error('Error al obtener las categorías', error);
             });
-    }, []);
-
-
+    }, []); // Quita la dependencia store ya que no se está utilizando en el cuerpo del useEffect
 
     return (
         <div className="relative py-5">
