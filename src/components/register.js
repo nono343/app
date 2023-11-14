@@ -1,123 +1,41 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { Context } from '../store/appContext';  // Ajusta la ruta según tu estructura de carpetas
 
 const Register = () => {
+  const { actions } = React.useContext(Context);  // Utiliza el hook useContext para acceder al contexto
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
 
-  const handleUsernameChange = (e) => {
-    setUsername(e.target.value);
-  };
+  const handleRegister = async (e) => {
+    e.preventDefault();
 
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-  };
-
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-  };
-
-  const handleRegister = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/register', {
-        username: username,
-        password: password,
-        email: email,
-      });
-
-      if (response.status === 200) {
-        setMessage(response.data.message);
-      } else {
-        setMessage('Error al registrar el usuario');
-      }
-    } catch (error) {
-      console.error('Error al registrar el usuario', error);
-      setMessage('Error interno del servidor');
+    // Verifica si la acción registerUser está definida antes de llamarla
+    if (actions && actions.registerUser) {
+      await actions.registerUser(username, password);
+    } else {
+      console.error("La acción registerUser no está definida en las propiedades de acciones.");
     }
+
+    // Puedes agregar lógica adicional aquí, como redirigir al usuario a la página de inicio de sesión después del registro exitoso
   };
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <img
-          className="mx-auto h-10 w-auto"
-          src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
-          alt="Your Company"
-        />
-        <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Sign up for an account
-        </h2>
-      </div>
-
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form className="space-y-6">
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium leading-6 text-gray-900"
-            >
-              Username
-            </label>
-            <div className="mt-2">
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={handleUsernameChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium leading-6 text-gray-900"
-            >
-              Password
-            </label>
-            <div className="mt-2">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={handlePasswordChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              />
-            </div>
-          </div>
-
-
-          <div>
-            <button
-              type="button"
-              onClick={handleRegister}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Sign up
-            </button>
-          </div>
-        </form>
-
-        <p className="mt-10 text-center text-sm text-gray-500">
-          Already have an account?
-          <a
-            href="#"
-            className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
-          >
-            Log in
-          </a>
-        </p>
-        {message && <p className="mt-4 text-center text-red-500">{message}</p>}
-      </div>
+    <div>
+      <h2>Registro</h2>
+      <form onSubmit={handleRegister}>
+        <label>
+          Usuario:
+          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+        </label>
+        <br />
+        <label>
+          Contraseña:
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+        <br />
+        <br />
+        <button type="submit">Registrarse</button>
+      </form>
     </div>
   );
 };

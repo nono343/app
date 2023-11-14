@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import getState from "./flux.js";
 
-// Don't change, here is where we initialize our context, by default it's just going to be null.
+// Crear el contexto
 export const Context = React.createContext(null);
 
-// This function injects the global store to any view/component where you want to use it, we will inject the context to layout.js, you can see it here:
-// https://github.com/4GeeksAcademy/react-hello-webapp/blob/master/src/js/layout.js#L35
+// Esta función envuelve tu componente y provee el contexto a través de un proveedor
 const injectContext = (PassedComponent) => {
   const StoreWrapper = (props) => {
-    //this will be passed as the contenxt value
+    // Estado local para manejar el estado global de la aplicación
     const [state, setState] = useState(
       getState({
         getStore: () => state.store,
@@ -22,26 +21,29 @@ const injectContext = (PassedComponent) => {
     );
 
     useEffect(() => {
-      /**
-       * EDIT THIS!
-       * This function is the equivalent to "window.onLoad", it only runs once on the entire application lifetime
-       * you should do your ajax requests or fetch api requests here. Do not use setState() to save data in the
-       * store, instead use actions, like this:
-       **/
-      //state.actions.getMessage(); // <---- calling this function from the flux.js actions
-      state.actions.validate_token();
-
-    }, []);
-
-    // The initial value for the context is not null anymore, but the current state of this component,
-    // the context will now have a getStore, getActions and setStore functions available, because they were declared
-    // on the state of this component
+      const fetchData = async () => {
+        // Verifica si ya estás autenticado para evitar un bucle infinito
+        if (!state.store.isLoggedIn) {
+          // Realiza acciones específicas al cargar la aplicación
+          await state.actions.validateToken();
+        }
+      };
+    
+      // Llama a fetchData
+      fetchData();
+    
+      // Este efecto se ejecuta solo una vez, es similar a componentDidMount en clases de componentes de clase
+    }, [state.actions, state.store.isLoggedIn]); // Agrega state.actions y state.store.isLoggedIn al array de dependencias
+            
+    // El valor inicial del contexto no es nulo, es el estado actual de este componente
     return (
       <Context.Provider value={state}>
+        {/* Pasar el componente envuelto con el proveedor de contexto */}
         <PassedComponent {...props} />
       </Context.Provider>
     );
   };
+
   return StoreWrapper;
 };
 

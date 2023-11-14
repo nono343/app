@@ -27,16 +27,11 @@ export default function Navbar({ toggleLanguage, isSpanish, store, actions }) {
 
   const handleLogout = async () => {
     try {
-      // Realiza la lógica para cerrar la sesión en el servidor
+      // Llama a la acción de logout desde el contexto
       await actions.logout();
-
-      // Limpia el estado local y el almacenamiento local
-      setEnabled(false);
-      setCategories([]);
-      actions.updateLoginStatus(false);
-      navigate('/');
+      console.log('Logout exitoso');
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Error al intentar cerrar sesión:', error);
     }
   };
   

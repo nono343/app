@@ -3,7 +3,7 @@ import os
 from flask import jsonify, request
 from datetime import timedelta
 from werkzeug.utils import secure_filename
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies, get_jwt
 from models import User,Categorias, Productos,MesesProduccion , Packagings   # Importa el modelo de usuario (ajusta el nombre según tu configuración)
 from app import app, db, bcrypt, flash,redirect
 from util import allowed_file  # Importa la función allowed_file desde util.py
@@ -11,8 +11,8 @@ from flask import send_from_directory
 
 
 
-# Registro de usuario
-# Registro de usuario
+# ...
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -32,17 +32,8 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'Usuario registrado con éxito'})
-
-# Ruta para obtener la información de los usuarios
-@app.route('/users', methods=['GET'])
-def get_users():
-    # Obtén la lista de usuarios (en este ejemplo, devuelve todos los usuarios)
-    users = User.query.all()
-
-    # Serializa la información de los usuarios (devuelve solo id y username)
-    serialized_users = [{'id': user.id, 'username': user.username} for user in users]
-    return jsonify({'users': serialized_users})
+    # Respuesta de éxito al registro
+    return jsonify({'message': 'Usuario registrado exitosamente'}), 201  # Código 201 significa "Created"
 
 
 @app.route('/login', methods=['POST'])
@@ -58,6 +49,7 @@ def login():
 
     # Genera un token de acceso con Flask-JWT-Extended
     access_token = create_access_token(identity={
+        'id': user.id,  # Agrega el id del usuario
         'username': username,
         'is_admin': user.is_admin
     }, expires_delta=timedelta(days=1))
@@ -66,27 +58,37 @@ def login():
 
     return jsonify(access_token=access_token)
 
-
-
-# Proteja una ruta con jwt_required, que eliminará las solicitudes
-# sin un JWT válido presente.
-@app.route("/validate-token", methods=["GET"])
+@app.route('/validate-token', methods=['GET'])
 @jwt_required()
-def get_info_profile():
+def validate_token():
     try:
-        # Access the identity of the current user with get_jwt_identity
         current_user = get_jwt_identity()
-        #user = User.query.filter_by(email=current_user).first()
+        user = User.query.filter_by(username=current_user['username']).first()
 
-        # Añadir más información relacionada con el usuario si es necesario
-        user_info = {"username": current_user, "isLogged": True}
+        if not user:
+            return jsonify({'message': 'Usuario no encontrado'}), 404
+
+        user_info = {
+            'id': user.id,  # Agrega el id del usuario
+            'username': user.username,
+            'is_admin': user.is_admin,
+        }
+
         return jsonify(user_info), 200
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Token has expired"}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({"error": "Invalid token"}), 401
     except Exception as e:
-        return jsonify({"error": str(e)}), 422
+        # Manejar la excepción y devolver una respuesta adecuada
+        return jsonify({'message': 'Error interno del servidor'}), 500
+
+
+# Ruta para obtener la información de los usuarios
+@app.route('/users', methods=['GET'])
+def get_users():
+    # Obtén la lista de usuarios (en este ejemplo, devuelve todos los usuarios)
+    users = User.query.all()
+
+    # Serializa la información de los usuarios (devuelve solo id y username)
+    serialized_users = [{'id': user.id, 'username': user.username} for user in users]
+    return jsonify({'users': serialized_users})
 
 
 # Ruta protegida que requiere autenticación
@@ -265,6 +267,62 @@ def delete_category(category_id):
     else:
         return jsonify({'error': 'Categoría no encontrada'}), 404
 
+# Ruta para obtener todos los productos de una categoría
+@app.route('/categories/<int:categoria_id>', methods=['GET'])
+def get_products_by_category(categoria_id):
+    try:
+        # Consulta la categoría especificada en la base de datos
+        categoria = Categorias.query.get_or_404(categoria_id)
+
+        # Consulta todos los productos asociados a la categoría
+        products = Productos.query.filter_by(categoria_id=categoria_id).all()
+        product_list = []
+
+        for product in products:
+            # Consulta los packagings asociados a cada producto
+            packagings = Packagings.query.filter_by(producto_id=product.id).all()
+
+            # Crea una lista de datos de packaging asociados al producto
+            packaging_list = []
+            for packaging in packagings:
+                packaging_data = {
+                    'id': packaging.id,
+                    'nombreesp': packaging.nombreesp,
+                    'nombreeng': packaging.nombreeng,
+                    'presentacion': packaging.presentacion,
+                    'peso_presentacion_g': packaging.peso_presentacion_g,
+                    'peso_neto_kg': packaging.peso_neto_kg,
+                    'tamano_caja': packaging.tamano_caja,
+                    'pallet_80x120': packaging.pallet_80x120,
+                    'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
+                    'pallet_100x120': packaging.pallet_100x120,
+                    'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
+                    'foto': packaging.foto,
+                    'producto_id': packaging.producto_id,
+                    'user_id': packaging.user_id,
+                }
+                packaging_list.append(packaging_data)
+
+            # Crea un diccionario de datos del producto y sus packagings asociados
+            product_data = {
+                'id': product.id,
+                'nombreesp': product.nombreesp,
+                'nombreeng': product.nombreeng,
+                'descripcionesp': product.descripcionesp,
+                'descripcioneng': product.descripcioneng,
+                'categoria_id': product.categoria_id,
+                'foto': product.foto,
+                'packagings': packaging_list,
+            }
+            product_list.append(product_data)
+
+        return jsonify(category=categoria.nombreesp, products=product_list), 200
+
+    except Exception as e:
+        # Registra el error en los registros del servidor
+        print(f"Error al obtener los productos de la categoría: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
 
 # Ruta para crear un nuevo producto
 @app.route('/upload_product', methods=['POST'])
@@ -352,6 +410,66 @@ def get_products():
 
     return jsonify(products=product_list)
 
+
+@app.route('/categories/<int:categoria_id>/productos/<int:producto_id>', methods=['GET'])
+def get_product_by_id(categoria_id, producto_id):
+    try:
+        # Consulta el producto por ID y en la categoría especificada en la base de datos
+        product = Productos.query.filter_by(id=producto_id, categoria_id=categoria_id).first()
+
+        if not product:
+            return jsonify({'error': 'Producto no encontrado en la categoría especificada'}), 404
+
+        # Consulta los packagings asociados al producto
+        packagings = Packagings.query.filter_by(producto_id=product.id).all()
+
+        # Consulta los meses de producción asociados al producto
+        meses_produccion = MesesProduccion.query.filter_by(producto_id=product.id).all()
+
+        # Crea una lista de datos de packaging asociados al producto
+        packaging_list = []
+        for packaging in packagings:
+            packaging_data = {
+                'id': packaging.id,
+                'nombreesp': packaging.nombreesp,
+                'nombreeng': packaging.nombreeng,
+                'presentacion': packaging.presentacion,
+                'peso_presentacion_g': packaging.peso_presentacion_g,
+                'peso_neto_kg': packaging.peso_neto_kg,
+                'tamano_caja': packaging.tamano_caja,
+                'pallet_80x120': packaging.pallet_80x120,
+                'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
+                'pallet_100x120': packaging.pallet_100x120,
+                'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
+                'foto': packaging.foto,
+                'producto_id': packaging.producto_id,
+                'user_id': packaging.user_id,
+            }
+            packaging_list.append(packaging_data)
+
+
+
+        # Incluye los meses de producción en el diccionario de datos del producto
+        product_data = {
+            'id': product.id,
+            'nombreesp': product.nombreesp,
+            'nombreeng': product.nombreeng,
+            'descripcionesp': product.descripcionesp,
+            'descripcioneng': product.descripcioneng,
+            'categoria_id': product.categoria_id,
+            'foto': product.foto,
+            'packagings': packaging_list,
+            'meses_produccion': [mes.mes for mes in meses_produccion],  # Lista de meses de producción
+        }
+
+        return jsonify(product=product_data), 200
+    except Exception as e:
+        # Registra el error en los registros del servidor
+        print(f"Error al obtener la información del producto en la categoría: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
+
 # Ruta para eliminar un producto por su ID
 @app.route('/productos/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
@@ -417,40 +535,44 @@ def edit_product(product_id):
         return jsonify({'error': 'Producto no encontrado'}), 404
 
 
-
-
-
+# Ruta para obtener los meses de producción asociados a un producto
 @app.route('/productos/<int:producto_id>/meses', methods=['GET'])
-def ver_meses(producto_id):
-    producto = Productos.query.get(producto_id)
-    meses = MesesProduccion.query.filter_by(producto_id=producto_id).all()
-    meses_de_produccion = []
+def obtener_meses_de_produccion(producto_id):
+    try:
+        producto = Productos.query.get(producto_id)
+        meses = MesesProduccion.query.filter_by(producto_id=producto_id).all()
 
-    for mes in meses:
-        meses_de_produccion.append({'id': mes.id, 'mes': mes.mes})
+        meses_de_produccion = [{'id': mes.id, 'mes': mes.mes} for mes in meses]
 
-    return jsonify(producto_id=producto_id, meses_de_produccion=meses_de_produccion)
+        return jsonify(producto_id=producto_id, meses_de_produccion=meses_de_produccion), 200
+    except Exception as e:
+        print(f"Error al obtener los meses de producción del producto: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
 
-
-
-# Ruta para añadir un mes de producción a un producto
+# Ruta para agregar meses de producción a un producto
 @app.route('/productos/<int:producto_id>/meses/agregar', methods=['POST'])
-def agregar_mes(producto_id):
-    data = request.get_json()
-    mes = data.get('mes')
+def agregar_meses_de_produccion(producto_id):
+    try:
+        data = request.get_json()
+        nuevos_meses = data.get('meses', [])
 
-    app.logger.info(f'Solicitud POST recibida para agregar mes al producto ID {producto_id}')
-    app.logger.info(f'Datos recibidos: {data}')
+        for nuevo_mes in nuevos_meses:
+            # Verifica si el mes ya existe para el producto
+            mes_existente = MesesProduccion.query.filter_by(mes=nuevo_mes, producto_id=producto_id).first()
 
-    if not mes or not isinstance(mes, str):
-        app.logger.error('El campo mes debe ser una cadena y es requerido en los datos recibidos.')
-        return jsonify({'error': 'El campo mes debe ser una cadena y es requerido'}), 400
+            if not mes_existente:
+                mes = MesesProduccion(mes=nuevo_mes, producto_id=producto_id)
+                db.session.add(mes)
 
-    nuevo_mes = MesesProduccion(mes=mes, producto_id=producto_id)
-    db.session.add(nuevo_mes)
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({'message': 'Mes de producción agregado con éxito'}), 200
+        return jsonify({'message': 'Meses de producción agregados con éxito'}), 201
+    except Exception as e:
+        print(f"Error al agregar los meses de producción al producto: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
 # Ruta para eliminar un mes de producción de un producto por su ID
 @app.route('/productos/<int:producto_id>/meses/eliminar/<int:mes_id>', methods=['DELETE'])
 def eliminar_mes(producto_id, mes_id):
@@ -519,4 +641,39 @@ def upload_packaging():
     except Exception as e:
         # Registra el error en los registros del servidor
         print(f"Error en la carga del embalaje: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
+@app.route('/packagings', methods=['GET'])
+def get_packagings():
+    try:
+        # Obtén todos los packagings de la base de datos
+        packagings = Packagings.query.all()
+
+        # Convierte los objetos Packagings a un formato serializable
+        packagings_list = []
+        for packaging in packagings:
+            packaging_data = {
+                'id': packaging.id,
+                'nombreesp': packaging.nombreesp,
+                'nombreeng': packaging.nombreeng,
+                'presentacion': packaging.presentacion,
+                'peso_presentacion_g': packaging.peso_presentacion_g,
+                'peso_neto_kg': packaging.peso_neto_kg,
+                'tamano_caja': packaging.tamano_caja,
+                'pallet_80x120': packaging.pallet_80x120,
+                'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
+                'pallet_100x120': packaging.pallet_100x120,
+                'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
+                'foto': packaging.foto,
+                'producto_id': packaging.producto_id,
+                'user_id': packaging.user_id
+                # Agrega más campos según sea necesario
+            }
+            packagings_list.append(packaging_data)
+
+        return jsonify({'packagings': packagings_list}), 200
+    except Exception as e:
+        # Registra el error en los registros del servidor
+        print(f"Error al obtener la información de los packagings: {str(e)}")
         return jsonify({'error': 'Error interno del servidor'}), 500

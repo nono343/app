@@ -14,10 +14,15 @@ function AdminCategory() {
     file: null,
   });
   const [showEditModal, setShowEditModal] = useState(false);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     // Realiza una solicitud GET para obtener las categorías
-    axios.get('http://localhost:5000/categories')
+    axios.get("http://localhost:5000/categories", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then((response) => {
         setCategories(response.data.categories);
         console.log('Respuesta del servidor:', response); // Imprime la respuesta en la consola
@@ -54,6 +59,7 @@ function AdminCategory() {
         const response = await axios.post('http://localhost:5000/upload_category', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`
           },
         });
         if (response.status === 200) {
@@ -80,6 +86,7 @@ function AdminCategory() {
       const response = await axios.delete(`http://localhost:5000/categories/${categoryId}`, {
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
       });
 
@@ -108,7 +115,12 @@ function AdminCategory() {
     formData.append('nombreeng', editCategoryData.nombreeng);
     formData.append('file', editCategoryData.file);
 
-    axios.put(`http://localhost:5000/categories/${editCategoryId}/edit`, formData)
+    axios.put(`http://localhost:5000/categories/${editCategoryId}/edit`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`
+      },
+    })
       .then(response => {
         console.log('Edición exitosa:', response.data.message);
         // Actualiza la lista de categorías después de la edición
@@ -126,8 +138,6 @@ function AdminCategory() {
 
     setShowEditModal(false);
   };
-
-
 
   return (
     <div className="App">
@@ -176,8 +186,6 @@ function AdminCategory() {
         </div>
       )}
     </div>
-
-
   );
 }
 
