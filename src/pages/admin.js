@@ -14,9 +14,9 @@ export default function Admin() {
         <div className='Admin'>
                 <div>
                     <AdminCategory />
-                    <AdminProduct />
+                    {/* <AdminProduct />
                     <AdminProductionMonth />
-                    <AdminPackaging />
+                    <AdminPackaging /> */}
                 </div>
         </div>
     );

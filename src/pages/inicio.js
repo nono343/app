@@ -22,6 +22,7 @@ export default function Inicio() {
     }, []); // Quita la dependencia store ya que no se está utilizando en el cuerpo del useEffect
 
     return (
+        
         <div className="relative py-5">
             <div className="container relative m-auto px-6 text-gray-500 md:px-12">
                 <div className="grid gap-6 md:mx-auto md:w-8/12 lg:w-full lg:grid-cols-3 animate-fade">

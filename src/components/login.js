@@ -11,20 +11,12 @@ const Login = () => {
   const handleLogin = async () => {
     // Llama a la acción loginUser con el nombre de usuario y la contraseña
     await actions.loginUser(username, password);
-    
+
     // Verifica si el inicio de sesión fue exitoso
     const { isLoggedIn } = store;
     setLoginSuccess(isLoggedIn);
   };
 
-  // // Si el inicio de sesión fue exitoso, redirige a /inicio
-  // if (loginSuccess) {
-  //   return <Navigate to="/inicio" />;
-  // };
-
-  // if (store.isLoggedIn) {
-  //   return <Navigate to="/inicio" />;
-  // }
 
   return (
     <div className="relative mx-auto mt-20 flex flex-col text-gray-700 bg-white shadow-md w-96 rounded-xl bg-clip-border">

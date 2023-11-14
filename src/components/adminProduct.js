@@ -33,13 +33,7 @@ const AdminProduct = () => {
                 console.error('Error al obtener las categorías', error);
             });
 
-        axios.get('http://localhost:5000/productos')
-            .then((response) => {
-                setProducts(response.data.products);
-            })
-            .catch((error) => {
-                console.error('Error al obtener los productos', error);
-            });
+       
     }, []);
 
     const handleFileChange = (event) => {

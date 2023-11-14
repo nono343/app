@@ -7,6 +7,8 @@ const AdminPackaging = () => {
     const [nombreEsp, setNombreEsp] = useState('');
     const [nombreEng, setNombreEng] = useState('');
     const [presentacion, setPresentacion] = useState('');
+    const [calibre, setCalibre] = useState('');
+
     const [pesoPresentacionG, setPesoPresentacionG] = useState('');
     const [pesoNetoKg, setPesoNetoKg] = useState('');
     const [tamanoCaja, setTamanoCaja] = useState('');
@@ -25,6 +27,7 @@ const AdminPackaging = () => {
         nombreesp: '',
         nombreeng: '',
         presentacion: '',
+        calibre: '',
         peso_presentacion_g: '',
         peso_neto_kg: '',
         tamano_caja: '',
@@ -89,6 +92,7 @@ const AdminPackaging = () => {
             formData.append('nombreesp', nombreEsp);
             formData.append('nombreeng', nombreEng);
             formData.append('presentacion', presentacion);
+            formData.append('calibre', calibre);
             formData.append('peso_presentacion_g', pesoPresentacionG);
             formData.append('peso_neto_kg', pesoNetoKg);
             formData.append('tamano_caja', tamanoCaja);
@@ -131,6 +135,7 @@ const AdminPackaging = () => {
             <input type="text" placeholder="Nombre en español" onChange={(e) => setNombreEsp(e.target.value)} />
             <input type="text" placeholder="Nombre en inglés" onChange={(e) => setNombreEng(e.target.value)} />
             <input type="text" placeholder="Presentación" onChange={(e) => setPresentacion(e.target.value)} />
+            <input type="text" placeholder="Calibre" onChange={(e) => setCalibre(e.target.value)} />
             <input type="text" placeholder="Peso Presentación (g)" onChange={(e) => setPesoPresentacionG(e.target.value)} />
             <input type="text" placeholder="Peso Neto (kg)" onChange={(e) => setPesoNetoKg(e.target.value)} />
             <input type="text" placeholder="Tamaño Caja" onChange={(e) => setTamanoCaja(e.target.value)} />

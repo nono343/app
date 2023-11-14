@@ -434,6 +434,7 @@ def get_product_by_id(categoria_id, producto_id):
                 'nombreesp': packaging.nombreesp,
                 'nombreeng': packaging.nombreeng,
                 'presentacion': packaging.presentacion,
+                'calibre': packaging.calibre,
                 'peso_presentacion_g': packaging.peso_presentacion_g,
                 'peso_neto_kg': packaging.peso_neto_kg,
                 'tamano_caja': packaging.tamano_caja,
@@ -602,6 +603,7 @@ def upload_packaging():
         nombreesp = request.form['nombreesp']
         nombreeng = request.form['nombreeng']
         presentacion = request.form['presentacion']
+        calibre = request.form['calibre']
         peso_presentacion_g = request.form['peso_presentacion_g']
         peso_neto_kg = request.form['peso_neto_kg']
         tamano_caja = request.form['tamano_caja']
@@ -622,6 +624,7 @@ def upload_packaging():
                 nombreesp=nombreesp,
                 nombreeng=nombreeng,
                 presentacion=presentacion,
+                calibre=calibre,
                 peso_presentacion_g=peso_presentacion_g,
                 peso_neto_kg=peso_neto_kg,
                 tamano_caja=tamano_caja,

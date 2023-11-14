@@ -94,6 +94,7 @@ class Packagings(db.Model):
     nombreesp = db.Column(db.String(80), nullable=False)
     nombreeng = db.Column(db.String(80), nullable=False)
     presentacion = db.Column(db.String(80), nullable=False)
+    calibre = db.Column(db.String(80), nullable=False)
     peso_presentacion_g = db.Column(db.String(80), nullable=False)
     peso_neto_kg = db.Column(db.String(80), nullable=False)
     tamano_caja = db.Column(db.String(80), nullable=False)
@@ -106,12 +107,13 @@ class Packagings(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_packagings_user_id', ondelete='CASCADE'), nullable=False)
     user = db.relationship('User', backref='packagings')
 
-    def __init__(self, nombreesp, nombreeng, presentacion, peso_presentacion_g, peso_neto_kg,
+    def __init__(self, nombreesp, nombreeng, presentacion,calibre, peso_presentacion_g, peso_neto_kg,
                  tamano_caja, pallet_80x120, peso_neto_pallet_80x120_kg, pallet_100x120,
                  peso_neto_pallet_100x120_kg, foto, producto_id, user_id):
         self.nombreesp = nombreesp
         self.nombreeng = nombreeng
         self.presentacion = presentacion
+        self.calibre = calibre
         self.peso_presentacion_g = peso_presentacion_g
         self.peso_neto_kg = peso_neto_kg
         self.tamano_caja = tamano_caja
