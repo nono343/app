@@ -8,7 +8,6 @@ const AdminPackaging = () => {
     const [nombreEng, setNombreEng] = useState('');
     const [presentacion, setPresentacion] = useState('');
     const [calibre, setCalibre] = useState('');
-
     const [pesoPresentacionG, setPesoPresentacionG] = useState('');
     const [pesoNetoKg, setPesoNetoKg] = useState('');
     const [tamanoCaja, setTamanoCaja] = useState('');
@@ -47,7 +46,6 @@ const AdminPackaging = () => {
     const handleUserChange = (e) => {
         setSelectedUserId(e.target.value);
     };
-
 
 
     useEffect(() => {

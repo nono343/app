@@ -10,6 +10,7 @@ import injectContext from './store/appContext';
 import { Context } from './store/appContext';
 import ProductosPorCategoria from './pages/categorias';
 import DetalleProducto from './pages/productos';
+import Aaa from './components/aaa';
 
 function App() {
   // Accede al contexto
@@ -34,6 +35,7 @@ function App() {
 
         <div className='App'>
           <Routes>
+            <Route path="/aaa" element={<Aaa />} />
             <Route path="/register" element={<Register />} />
             <Route
               path="/"
