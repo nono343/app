@@ -44,7 +44,7 @@ function App() {
             <Route path="/logout" element={<Logout />} />
             <Route path="/inicio" element={<Inicio />} />
             <Route path="/categories/:id" element={<ProductosPorCategoria />} />
-            <Route path="/categories/:categoriaId/productos/:productoId" element={<DetalleProducto />} />
+            <Route path="/categories/:categoria_id/productos/:producto_id"  element={<DetalleProducto />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </div>

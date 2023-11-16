@@ -74,6 +74,9 @@ function AdminCategory() {
 
   const toggleFormularioCategorias = () => {
     setMostrarFormularioCategorias(!mostrarFormularioCategorias);
+    setMostrarFormularioProductos(false);
+
+
   };
 
 
@@ -162,6 +165,9 @@ function AdminCategory() {
 
   const toggleFormularioProductos = () => {
     setMostrarFormularioProductos(!mostrarFormularioProductos);
+
+    // Cerrar siempre mostrarFormularioCategorias al abrir mostrarFormularioProductos
+    setMostrarFormularioCategorias(false);
   };
 
   //subir meses 
@@ -180,21 +186,23 @@ function AdminCategory() {
   };
 
   const handleCheckboxChange = (month) => {
-    const updatedMonths = selectedMonths.includes(month)
-      ? selectedMonths.filter(selectedMonth => selectedMonth !== month)
-      : [...selectedMonths, month];
+    // Clona el array de selectedMonths para no mutar el estado directamente
+    const updatedMonths = [...selectedMonths];
 
-    setSelectedMonths(updatedMonths);
+    // Verifica si el mes ya está en la lista
+    const index = updatedMonths.indexOf(month);
 
-    // Actualizar la lista de productos cuando cambian los meses
-    if (productId) {
-      axios.get(`http://localhost:5000/productos/${productId}/meses`, {
-        params: { meses: updatedMonths.join(',') }
-      })
-        .then(response => setProducts(response.data.products))
-        .catch(error => console.error('Error al obtener la lista de productos después de agregar meses:', error));
+    // Si el mes está en la lista, lo quita; de lo contrario, lo agrega
+    if (index !== -1) {
+      updatedMonths.splice(index, 1);
+    } else {
+      updatedMonths.push(month);
     }
+
+    // Actualiza el estado con el nuevo array
+    setSelectedMonths(updatedMonths);
   };
+
 
   const handleAgregarMeses = async () => {
     try {
@@ -214,90 +222,149 @@ function AdminCategory() {
 
   //subir packaging
 
+  const [mostrarFormularioPackaging, setMostrarFormularioPackaging] = useState(false);
 
-  const [selectedFilePackaging, setSelectedFilePackaging] = useState(null);
-  const [uploadedFileNamePackaging, setUploadedFileNamePackaging] = useState('');
-  const [nombreEspPackaging, setNombreEspPackaging] = useState('');
-  const [nombreEngPackaging, setNombreEngPackaging] = useState('');
-  const [presentacionPackaging, setPresentacionPackaging] = useState('');
-  const [calibrePackaging, setCalibrePackaging] = useState('');
-  const [pesoPresentacionGPackaging, setPesoPresentacionGPackaging] = useState('');
-  const [pesoNetoKgPackaging, setPesoNetoKgPackaging] = useState('');
-  const [tamanoCajaPackaging, setTamanoCajaPackaging] = useState('');
-  const [pallet80x120Packaging, setPallet80x120Packaging] = useState('');
-  const [pesoNetoPallet80x120KgPackaging, setPesoNetoPallet80x120KgPackaging] = useState('');
-  const [pallet100x120Packaging, setPallet100x120Packaging] = useState('');
-  const [pesoNetoPallet100x120KgPackaging, setPesoNetoPallet100x120KgPackaging] = useState('');
-  const [usersPackaging, setUsersPackaging] = useState([]);  // Added state for users
-  const [selectedUserId, setSelectedUserId] = useState('');  // State to store the selected user ID
-  const [selectedProductId, setSelectedProductId] = useState('');  // State to store the selected product ID
+  const toggleFormularioPackaging = () => {
+    setMostrarFormularioPackaging(!mostrarFormularioPackaging);
+    setMostrarFormularioCategorias(false);
+    setMostrarFormularioProductos(false);
 
-
-  useEffect(() => {
-
-    axios.get('http://localhost:5000/users')
-      .then((response) => {
-        setUsersPackaging(response.data.users);
-      })
-      .catch((error) => {
-        console.error('Error al obtener los usuarios', error);
-      });
-
-  }, []);
-
-
-  const handleUserChange = (e) => {
-    setSelectedUserId(e.target.value);
   };
 
-  const handleUpload = async () => {
-    if (selectedFilePackaging && nombreEspPackaging && nombreEngPackaging && productId && selectedUserId) {
-      const formData = new FormData();
-      formData.append('file', selectedFilePackaging);
-      formData.append('nombreesp', nombreEspPackaging);
-      formData.append('nombreeng', nombreEngPackaging);
-      formData.append('presentacion', presentacionPackaging);
-      formData.append('calibre', calibrePackaging);
-      formData.append('peso_presentacion_g', pesoPresentacionGPackaging);
-      formData.append('peso_neto_kg', pesoNetoKgPackaging);
-      formData.append('tamano_caja', tamanoCajaPackaging);
-      formData.append('pallet_80x120', pallet80x120Packaging);
-      formData.append('peso_neto_pallet_80x120_kg', pesoNetoPallet80x120KgPackaging);
-      formData.append('pallet_100x120', pallet100x120Packaging);
-      formData.append('peso_neto_pallet_100x120_kg', pesoNetoPallet100x120KgPackaging);
-      formData.append('producto_id', selectedProductId);  // Added product ID
-      formData.append('user_id', selectedUserId);  // Added user ID
 
+  const [file, setFile] = useState(null);
+  const [nombreesp, setNombreEsp] = useState('');
+  const [nombreeng, setNombreEng] = useState('');
+  const [presentacion, setPresentacion] = useState('');
+  const [calibre, setCalibre] = useState('');
+  const [pesoPresentacion, setPesoPresentacion] = useState('');
+  const [pesoNeto, setPesoNeto] = useState('');
+  const [tamanoCaja, setTamanoCaja] = useState('');
+  const [pallet80x120, setPallet80x120] = useState('');
+  const [pesoNetoPallet80x120, setPesoNetoPallet80x120] = useState('');
+  const [pallet100x120, setPallet100x120] = useState('');
+  const [pesoNetoPallet100x120, setPesoNetoPallet100x120] = useState('');
+  const [productoId, setProductoId] = useState('');
+  const [userIds, setUserIds] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [productIds, setProductIds] = useState([]);
+  const [availableProducts, setAvailableProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/upload_packaging', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        const usersResponse = await axios.get('http://localhost:5000/users');
+        setAvailableUsers(usersResponse.data.users || []);
 
-        if (response.status === 200) {
-          setUploadedFileNamePackaging(response.data.message);
-
-          axios.get('http://localhost:5000/productos')
-            .then((response) => {
-              setProducts(response.data.products);
-            })
-            .catch((error) => {
-              console.error('Error fetching products after upload', error);
-            });
-        } else {
-          console.error('Error en la carga del embalaje con foto:', response.status, response.data);
-        }
+        const productsResponse = await axios.get('http://localhost:5000/productos'); // Cambiado de 'products' a 'productos'
+        setAvailableProducts(productsResponse.data.products || []);
       } catch (error) {
-        console.error('Error en la carga del embalaje con foto:', error);
+        console.error('Error al obtener la lista de usuarios o productos:', error.response.data.error);
       }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    console.log('Usuarios actualizados:', availableUsers);
+  }, [availableUsers]);
+
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]);
+  };
+
+  const handlePackagingCheckboxChange = (id, type) => {
+    const stringId = String(id); // Convertir el ID a cadena
+
+    if (type === 'user') {
+      setUserIds((prevUserIds) =>
+        prevUserIds.includes(stringId)
+          ? prevUserIds.filter((userId) => userId !== stringId)
+          : [...prevUserIds, stringId]
+      );
+    } else if (type === 'product') {
+      // Actualizar el estado de productoId
+      setProductoId((prevProductId) =>
+        prevProductId === stringId ? '' : stringId
+      );
+
+      // Actualizar el estado de productIds si es necesario
+      setProductIds((prevProductIds) =>
+        prevProductIds.includes(stringId)
+          ? prevProductIds.filter((productId) => productId !== stringId)
+          : [...prevProductIds, stringId]
+      );
     }
   };
 
-  const handleFileChange = (event) => {
-    setSelectedFilePackaging(event.target.files[0]);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+  
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('nombreesp', nombreesp);
+      formData.append('nombreeng', nombreeng);
+      formData.append('presentacion', presentacion);
+      formData.append('calibre', calibre);
+      formData.append('peso_presentacion_g', pesoPresentacion);
+      formData.append('peso_neto_kg', pesoNeto);
+      formData.append('tamano_caja', tamanoCaja);
+      formData.append('pallet_80x120', pallet80x120);
+      formData.append('peso_neto_pallet_80x120_kg', pesoNetoPallet80x120);
+      formData.append('pallet_100x120', pallet100x120);
+      formData.append('peso_neto_pallet_100x120_kg', pesoNetoPallet100x120);
+  
+      // Agrega el ID del producto al formData
+      formData.append('producto_id', productIds);
+  
+      // Agrega cada user_id al formData
+      userIds.forEach((userId) => {
+        formData.append('user_ids', userId);
+      });
+  
+      console.log('Datos del formulario:', formData);
+  
+      const response = await axios.post('http://localhost:5000/upload_packaging', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+  
+      console.log(response.data.message);
+      // Realizar acciones adicionales después de la carga exitosa
+    } catch (error) {
+      console.error('Error en la carga del embalaje:', error.response.data.error);
+      // Manejar el error según sea necesario
+    }
   };
+  
 
+  const [packagings, setPackagings] = useState([]);
+
+  useEffect(() => {
+    const fetchPackagings = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/packagings'); // Reemplaza con la ruta correcta
+        setPackagings(response.data.packagings || []);
+      } catch (error) {
+        console.error('Error al obtener los packagings:', error.response.data.error);
+      }
+    };
+
+    fetchPackagings();
+  }, []);
+
+
+
+  // Define handleSelectPackagingChange function
+  const handleSelectPackagingChange = (selectedProductId, type) => {
+    // Implement your logic here
+    console.log('Selected Product ID:', selectedProductId);
+    // Update the state or perform other actions as needed
+    setProductIds([selectedProductId]);
+  };
 
 
 
@@ -319,7 +386,7 @@ function AdminCategory() {
               </a>
             </li>
             <li>
-              <a>
+              <a onClick={toggleFormularioProductos}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                 </svg>
@@ -327,7 +394,7 @@ function AdminCategory() {
               </a>
             </li>
             <li>
-              <a>
+              <a onClick={toggleFormularioPackaging}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                 </svg>
@@ -357,7 +424,7 @@ function AdminCategory() {
             </a>
           </li>
           <li>
-            <a>
+            <a onClick={toggleFormularioPackaging}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
               </svg>
@@ -378,17 +445,25 @@ function AdminCategory() {
                 </div>
               } */}
           <form className="grid md:grid-cols-3 gap-6 max-w-screen-xl mx-auto">
-            <div>
-              <label for="first_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nombre categoría español</label>
-              <input type="text" id="first_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="John" onChange={handleNombreEspChangeCategory} required />
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_esp">
+                <span className="label-text">Nombre categoría español</span>
+              </label>
+              <input type="text" id="name_esp" className="input input-bordered w-full max-w-xs" placeholder="Nombre" onChange={handleNombreEspChangeCategory} required />
             </div>
-            <div>
-              <label for="last_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nombre categoría ingles</label>
-              <input type="text" id="last_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Doe" onChange={handleNombreEngChangeCategory} required />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_eng">
+                <span className="label-text">Nombre categoría ingles</span>
+              </label>
+              <input type="text" id="name_eng" className="input input-bordered w-full max-w-xs" placeholder="Nombre" onChange={handleNombreEngChangeCategory} required />
             </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="file_input">Foto categoría</label>
-              <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file" onChange={handleFileChangeCategory} />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Foto categría</span>
+              </label>
+              <input type="file" className="file-input file-input-bordered w-full max-w-xs" onChange={handleFileChangeCategory} required />
             </div>
 
             <div className='mx-auto md:col-start-2'>
@@ -442,24 +517,38 @@ function AdminCategory() {
                 </div>
               } */}
           <form className="grid md:grid-cols-3 gap-6 max-w-screen-xl mx-auto">
-            <div>
-              <label for="first_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nombre producto español</label>
-              <input type="text" id="first_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="John" onChange={handleNombreEspChangeProduct} required />
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_esp">
+                <span className="label-text">Nombre producto español</span>
+              </label>
+              <input type="text" id="name_product_esp" className="input input-bordered w-full max-w-xs" placeholder="Nombre" onChange={handleNombreEspChangeProduct} required />
             </div>
-            <div>
-              <label for="last_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nombre producto ingles</label>
-              <input type="text" id="last_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Doe" onChange={handleNombreEngChangeProduct} required />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_eng">
+                <span className="label-text">Nombre producto ingles</span>
+              </label>
+              <input type="text" id="name_product_eng" className="input input-bordered w-full max-w-xs" placeholder="Nombre" onChange={handleNombreEngChangeProduct} required />
             </div>
-            <div>
-              <label for="first_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Descripción producto español</label>
-              <input type="text" id="first_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="John" onChange={handleDescripcionEspChange} required />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_eng">
+                <span className="label-text">Descripción producto español</span>
+              </label>
+              <input type="text" id="description_product_esp" className="input input-bordered w-full max-w-xs" placeholder="Descripción" onChange={handleDescripcionEspChange} required />
             </div>
-            <div>
-              <label for="last_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Descripción producto ingles</label>
-              <input type="text" id="last_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Doe" onChange={handleDescripcionEngChange} required />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_eng">
+                <span className="label-text">Descripción producto ingles</span>
+              </label>
+              <input type="text" id="description_product_eng" className="input input-bordered w-full max-w-xs" placeholder="Descripción" onChange={handleDescripcionEngChange} required />
             </div>
-            <div>
-              <label for="last_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Categoría</label>
+
+            <div className='form-control w-full max-w-xs"'>
+              <label className="label">
+                <span className="label-text">Categoría</span>
+              </label>
               <select
                 className="select select-bordered w-full max-w-xs"
                 value={categoryId}
@@ -473,10 +562,14 @@ function AdminCategory() {
                 ))}
               </select>
             </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="file_input">Foto producto</label>
-              <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file" onChange={handleFileChangeProduct} />
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Foto producto</span>
+              </label>
+              <input type="file" className="file-input file-input-bordered w-full max-w-xs" onChange={handleFileChangeProduct} required />
             </div>
+
 
             <div className='mx-auto md:col-start-2'>
               <button onClick={handleUploadProduct} type="button" class="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Crear Producto</button>
@@ -500,7 +593,7 @@ function AdminCategory() {
               </select>
             </div>
 
-            <div>
+            <div className='max-w-screen-md'>
               <label htmlFor="monthSelector" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Meses de producción:
               </label>
@@ -525,12 +618,10 @@ function AdminCategory() {
                   </li>
                 ))}
               </ul>
-
             </div>
           </form>
-
           <div className='flex justify-center mt-5'>
-            <button onClick={handleAgregarMeses} type="button" class="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Añadir meses</button>
+            <button onClick={handleAgregarMeses} type="button" class="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900 mb-5">Añadir meses</button>
           </div>
 
 
@@ -575,7 +666,10 @@ function AdminCategory() {
                       {product.descripcioneng}
                     </td>
                     <td>
-                      {product.mesproduccion}
+                      {product.meses_de_produccion.map(mes => (
+                        <span key={mes.id}>{mes.mes} </span>
+                      ))}
+
                     </td>
                   </tr>
                 ))}
@@ -585,101 +679,150 @@ function AdminCategory() {
         </div>
       )}
 
-      <div>
-        <ul>
-          {products.map(product => (
-            <li key={product.id}>
-              <strong>{product.nombreesp}</strong> - {product.nombreeng}
-              {product.foto && (
-                <img src={`http://localhost:5000/uploads/${product.foto}`} alt={product.nombreesp} />
-              )}
 
-              <ul>
-                {product.packagings && product.packagings.map(packaging => (
-                  <li key={packaging.id}>
-                    <strong>{packaging.nombreesp}</strong> - {packaging.nombreeng}
-                    {packaging.foto && (
-                      <img src={`http://localhost:5000/uploads/${packaging.foto}`} alt={packaging.nombreesp} />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {mostrarFormularioPackaging && (
 
-      <div>
-        <h2>Agregar Meses de Producción</h2>
-        <label>
-          Producto:
-          <select value={productId} onChange={handleProductChange}>
-            <option value="">Seleccionar producto</option>
-            {products.map(product => (
-              <option key={product.id} value={product.id}>
-                {product.nombreesp} - {product.nombreeng}
-              </option>
-            ))}
-          </select>
-        </label>
-        <br />
-        <label>Meses de producción:</label>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
-          <div key={month}>
-            <input
-              type="checkbox"
-              id={`month-${month}`}
-              checked={selectedMonths.includes(month)}
-              onChange={() => handleCheckboxChange(month)}
-            />
-            <label htmlFor={`month-${month}`}>{`Mes ${month}`}</label>
-          </div>
-        ))}
-        <br />
-        <button onClick={handleAgregarMeses}>
-          Agregar Meses
-        </button>
-      </div>
+        <div>
+          <form className="grid md:grid-cols-3 gap-6 max-w-screen-xl mx-auto">
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_esp">
+                <span className="label-text">Nombre Packaging Español</span>
+              </label>
+              <input type="text" id="name_packaging_esp" className="input input-bordered w-full max-w-xs" placeholder="Nombre Español" onChange={(e) => setNombreEsp(e.target.value)} required />
+            </div>
 
-      <div>
-        <input type="file" onChange={handleFileChange} />
-        <input type="text" placeholder="Nombre en español" onChange={(e) => setNombreEspPackaging(e.target.value)} />
-        <input type="text" placeholder="Nombre en inglés" onChange={(e) => setNombreEngPackaging(e.target.value)} />
-        <input type="text" placeholder="Presentación" onChange={(e) => setPresentacionPackaging(e.target.value)} />
-        <input type="text" placeholder="Calibre" onChange={(e) => setCalibrePackaging(e.target.value)} />
-        <input type="text" placeholder="Peso Presentación (g)" onChange={(e) => setPesoPresentacionGPackaging(e.target.value)} />
-        <input type="text" placeholder="Peso Neto (kg)" onChange={(e) => setPesoNetoKgPackaging(e.target.value)} />
-        <input type="text" placeholder="Tamaño Caja" onChange={(e) => setTamanoCajaPackaging(e.target.value)} />
-        <input type="text" placeholder="Pallet 80x120" onChange={(e) => setPallet80x120Packaging(e.target.value)} />
-        <input type="text" placeholder="Peso Neto Pallet 80x120 (kg)" onChange={(e) => setPesoNetoPallet80x120KgPackaging(e.target.value)} />
-        <input type="text" placeholder="Pallet 100x120" onChange={(e) => setPallet100x120Packaging(e.target.value)} />
-        <input type="text" placeholder="Peso Neto Pallet 100x120 (kg)" onChange={(e) => setPesoNetoPallet100x120KgPackaging(e.target.value)} />
-        <label>
-          Producto:
-          <select value={productId} onChange={handleProductChange}>
-            <option value="">Seleccionar producto</option>
-            {products.map(product => (
-              <option key={product.id} value={product.id}>
-                {product.nombreesp} - {product.nombreeng}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Usuario:
-          <select value={selectedUserId} onChange={handleUserChange}>
-            <option value="">Seleccionar usuario</option>
-            {usersPackaging.map(user => (
-              <option key={user.id} value={user.id}>
-                {user.username}
-              </option>
-            ))}
-          </select>
-        </label>
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="name_eng">
+                <span className="label-text">Nombre Packaging Inglés</span>
+              </label>
+              <input type="text" id="name_packaging_eng" className="input input-bordered w-full max-w-xs" placeholder="Nombre Ingles" onChange={(e) => setNombreEng(e.target.value)} required />
+            </div>
 
-        <button onClick={handleUpload}>Subir packaging con foto</button>
-        {uploadedFileNamePackaging && <p>Packaging uploaded: {uploadedFileNamePackaging}</p>}
-      </div>
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="presentacion">
+                <span className="label-text">Presentación</span>
+              </label>
+              <input type="text" id="presentacion" className="input input-bordered w-full max-w-xs" placeholder="Presentación" onChange={(e) => setPresentacion(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="calibre">
+                <span className="label-text">Calibre</span>
+              </label>
+              <input type="text" id="calibre" className="input input-bordered w-full max-w-xs" placeholder="Calibre" onChange={(e) => setCalibre(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pesopresentacion">
+                <span className="label-text">Peso Presentación</span>
+              </label>
+              <input type="text" id="pesopresentacion" className="input input-bordered w-full max-w-xs" placeholder="Peso Neto Presentación" onChange={(e) => setPesoPresentacion(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pesoneto">
+                <span className="label-text">Peso Neto (kg)</span>
+              </label>
+              <input type="text" id="pesoneto" className="input input-bordered w-full max-w-xs" placeholder="Peso Neto" onChange={(e) => setPesoNeto(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="tamanocaja">
+                <span className="label-text">Tamaño Caja</span>
+              </label>
+              <input type="text" id="tamanocaja" className="input input-bordered w-full max-w-xs" placeholder="Tamaño Caja" onChange={(e) => setTamanoCaja(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pallet80x120">
+                <span className="label-text">pallet80x120</span>
+              </label>
+              <input type="text" id="pallet80x120" className="input input-bordered w-full max-w-xs" placeholder="Pallet 80x120" onChange={(e) => setPallet80x120(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pesoNetoPallet80x120">
+                <span className="label-text">pesoNetoPallet80x120</span>
+              </label>
+              <input type="text" id="pesoNetoPallet80x120" className="input input-bordered w-full max-w-xs" placeholder="Peso Neto Pallet 80x120" onChange={(e) => setPesoNetoPallet80x120(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pallet100x120">
+                <span className="label-text">pallet100x120</span>
+              </label>
+              <input type="text" id="pallet100x120" className="input input-bordered w-full max-w-xs" placeholder="Pallet 80x120" onChange={(e) => setPallet100x120(e.target.value)} required />
+            </div>
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label" for="pesoNetoPallet100x120">
+                <span className="label-text">pesoNetoPallet100x120</span>
+              </label>
+              <input type="text" id="pesoNetoPallet100x120" className="input input-bordered w-full max-w-xs" placeholder="Peso Neto Pallet 80x120" onChange={(e) => setPesoNetoPallet100x120(e.target.value)} required />
+            </div>
+
+
+            {availableProducts.length > 0 && (
+              <div>
+                <p>Productos disponibles:</p>
+                <select
+                  value={productIds}
+                  onChange={(e) => {
+                    const selectedProductId = e.target.value;
+                    setProductIds(selectedProductId);
+                  }}
+                >
+                  <option value="">Selecciona un producto</option>
+                  {availableProducts.map((product) => (
+                    <option key={product.id} value={String(product.id)}>
+                      {product.nombreesp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+
+            {/* Mostrar nombres de usuarios disponibles */}
+            {availableUsers.length > 0 && (
+              <div>
+                <p>Usuarios disponibles:</p>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  {availableUsers.map((user) => (
+                    <li key={user.id} style={{ display: 'inline-block', marginRight: '10px' }}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          value={user.id}
+                          onChange={() => handlePackagingCheckboxChange(user.id, 'user')}
+                          checked={userIds.includes(String(user.id))} // Convertir a cadena para la comparación
+                        />
+                        {user.username}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+
+
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Foto producto</span>
+              </label>
+              <input type="file" className="file-input file-input-bordered w-full max-w-xs" onChange={handleFileChange} required />
+            </div>
+
+
+            <div className='mx-auto md:col-start-2'>
+              <button onClick={handleSubmit} type="button" class="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Crear Packaging</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+
 
     </div>
   );

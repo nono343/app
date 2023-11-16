@@ -268,61 +268,36 @@ def delete_category(category_id):
         return jsonify({'error': 'Categoría no encontrada'}), 404
 
 # Ruta para obtener todos los productos de una categoría
-@app.route('/categories/<int:categoria_id>', methods=['GET'])
-def get_products_by_category(categoria_id):
-    try:
-        # Consulta la categoría especificada en la base de datos
-        categoria = Categorias.query.get_or_404(categoria_id)
+@app.route('/categorias/<int:categoria_id>/productos', methods=['GET'])
+def get_productos_por_categoria(categoria_id):
+    # Obtener la categoría
+    categoria = Categorias.query.get(categoria_id)
 
-        # Consulta todos los productos asociados a la categoría
-        products = Productos.query.filter_by(categoria_id=categoria_id).all()
-        product_list = []
+    if categoria is None:
+        return jsonify({'error': 'Categoría no encontrada'}), 404
 
-        for product in products:
-            # Consulta los packagings asociados a cada producto
-            packagings = Packagings.query.filter_by(producto_id=product.id).all()
+    # Obtener los productos de la categoría
+    productos = Productos.query.filter_by(categoria_id=categoria.id).all()
 
-            # Crea una lista de datos de packaging asociados al producto
-            packaging_list = []
-            for packaging in packagings:
-                packaging_data = {
-                    'id': packaging.id,
-                    'nombreesp': packaging.nombreesp,
-                    'nombreeng': packaging.nombreeng,
-                    'presentacion': packaging.presentacion,
-                    'peso_presentacion_g': packaging.peso_presentacion_g,
-                    'peso_neto_kg': packaging.peso_neto_kg,
-                    'tamano_caja': packaging.tamano_caja,
-                    'pallet_80x120': packaging.pallet_80x120,
-                    'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
-                    'pallet_100x120': packaging.pallet_100x120,
-                    'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
-                    'foto': packaging.foto,
-                    'producto_id': packaging.producto_id,
-                    'user_id': packaging.user_id,
-                }
-                packaging_list.append(packaging_data)
+    # Crear una lista para almacenar la información de cada producto
+    productos_info = []
 
-            # Crea un diccionario de datos del producto y sus packagings asociados
-            product_data = {
-                'id': product.id,
-                'nombreesp': product.nombreesp,
-                'nombreeng': product.nombreeng,
-                'descripcionesp': product.descripcionesp,
-                'descripcioneng': product.descripcioneng,
-                'categoria_id': product.categoria_id,
-                'foto': product.foto,
-                'packagings': packaging_list,
-            }
-            product_list.append(product_data)
+    for producto in productos:
+        # Agregar información relevante del producto a la lista
+        producto_info = {
+            'id': producto.id,
+            'nombreesp': producto.nombreesp,
+            'nombreeng': producto.nombreeng,
+            'foto': producto.foto,
+            # Puedes agregar más campos según tus necesidades
+        }
+        productos_info.append(producto_info)
 
-        return jsonify(category=categoria.nombreesp, products=product_list), 200
+    # Devolver la lista de productos en formato JSON
+    return jsonify({'categoria': {'nombreesp': categoria.nombreesp, 'nombreeng': categoria.nombreeng}, 'productos': productos_info})
 
-    except Exception as e:
-        # Registra el error en los registros del servidor
-        print(f"Error al obtener los productos de la categoría: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
-
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # Ruta para crear un nuevo producto
 @app.route('/upload_product', methods=['POST'])
@@ -367,110 +342,91 @@ def upload_product():
 # Ruta para ver todos los productos
 @app.route('/productos', methods=['GET'])
 def get_products():
-    products = Productos.query.all()  # Consulta todos los productos en la base de datos
-    product_list = []
-
-    for product in products:
-        # Consulta los packagings asociados a cada producto
-        packagings = Packagings.query.filter_by(producto_id=product.id).all()
-        
-        # Crea una lista de datos de packaging asociados al producto
-        packaging_list = []
-        for packaging in packagings:
-            packaging_data = {
-                'id': packaging.id,
-                'nombreesp': packaging.nombreesp,
-                'nombreeng': packaging.nombreeng,
-                'presentacion': packaging.presentacion,
-                'peso_presentacion_g': packaging.peso_presentacion_g,
-                'peso_neto_kg': packaging.peso_neto_kg,
-                'tamano_caja': packaging.tamano_caja,
-                'pallet_80x120': packaging.pallet_80x120,
-                'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
-                'pallet_100x120': packaging.pallet_100x120,
-                'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
-                'foto': packaging.foto,
-                'producto_id': packaging.producto_id,
-                'user_id': packaging.user_id,
-            }
-            packaging_list.append(packaging_data)
-
-        # Crea un diccionario de datos del producto y sus packagings asociados
-        product_data = {
-            'id': product.id,
-            'nombreesp': product.nombreesp,
-            'nombreeng': product.nombreeng,
-            'descripcionesp': product.descripcionesp,
-            'descripcioneng': product.descripcioneng,
-            'categoria_id': product.categoria_id,
-            'foto': product.foto,
-            'packagings': packaging_list,
-        }
-        product_list.append(product_data)
-
-    return jsonify(products=product_list)
-
-
-@app.route('/categories/<int:categoria_id>/productos/<int:producto_id>', methods=['GET'])
-def get_product_by_id(categoria_id, producto_id):
     try:
-        # Consulta el producto por ID y en la categoría especificada en la base de datos
-        product = Productos.query.filter_by(id=producto_id, categoria_id=categoria_id).first()
+        products = Productos.query.all()  # Consulta todos los productos en la base de datos
+        product_list = []
 
-        if not product:
-            return jsonify({'error': 'Producto no encontrado en la categoría especificada'}), 404
+        for product in products:
+            # Consulta los packagings asociados a cada producto
+            packagings = product.packagings  # Utiliza la relación packagings definida en el modelo Productos
 
-        # Consulta los packagings asociados al producto
-        packagings = Packagings.query.filter_by(producto_id=product.id).all()
+            # Consulta los meses de producción asociados a cada producto
+            meses = product.meses_produccion
+            meses_de_produccion = [{'id': mes.id, 'mes': mes.mes} for mes in meses]
 
-        # Consulta los meses de producción asociados al producto
-        meses_produccion = MesesProduccion.query.filter_by(producto_id=product.id).all()
+            # Crea una lista de datos de packaging asociados al producto
+            packaging_list = []
+            for packaging in packagings:
+                users = [user.username for user in packaging.users]  # Accede a los usuarios asociados al packaging
+                packaging_data = {
+                    'id': packaging.id,
+                    'nombreesp': packaging.nombreesp,
+                    'nombreeng': packaging.nombreeng,
+                    'presentacion': packaging.presentacion,
+                    'peso_presentacion_g': packaging.peso_presentacion_g,
+                    'peso_neto_kg': packaging.peso_neto_kg,
+                    'tamano_caja': packaging.tamano_caja,
+                    'pallet_80x120': packaging.pallet_80x120,
+                    'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
+                    'pallet_100x120': packaging.pallet_100x120,
+                    'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
+                    'foto': packaging.foto,
+                    'producto_id': packaging.producto_id,
+                    'users': users,  # Agrega la lista de usuarios al diccionario de packaging_data
+                }
+                packaging_list.append(packaging_data)
 
-        # Crea una lista de datos de packaging asociados al producto
-        packaging_list = []
-        for packaging in packagings:
-            packaging_data = {
-                'id': packaging.id,
-                'nombreesp': packaging.nombreesp,
-                'nombreeng': packaging.nombreeng,
-                'presentacion': packaging.presentacion,
-                'calibre': packaging.calibre,
-                'peso_presentacion_g': packaging.peso_presentacion_g,
-                'peso_neto_kg': packaging.peso_neto_kg,
-                'tamano_caja': packaging.tamano_caja,
-                'pallet_80x120': packaging.pallet_80x120,
-                'peso_neto_pallet_80x120_kg': packaging.peso_neto_pallet_80x120_kg,
-                'pallet_100x120': packaging.pallet_100x120,
-                'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
-                'foto': packaging.foto,
-                'producto_id': packaging.producto_id,
-                'user_id': packaging.user_id,
+            # Crea un diccionario de datos del producto y sus packagings y meses de producción asociados
+            product_data = {
+                'id': product.id,
+                'nombreesp': product.nombreesp,
+                'nombreeng': product.nombreeng,
+                'descripcionesp': product.descripcionesp,
+                'descripcioneng': product.descripcioneng,
+                'categoria_id': product.categoria_id,
+                'foto': product.foto,
+                'packagings': packaging_list,
+                'meses_de_produccion': meses_de_produccion,
             }
-            packaging_list.append(packaging_data)
+            product_list.append(product_data)
 
-
-
-        # Incluye los meses de producción en el diccionario de datos del producto
-        product_data = {
-            'id': product.id,
-            'nombreesp': product.nombreesp,
-            'nombreeng': product.nombreeng,
-            'descripcionesp': product.descripcionesp,
-            'descripcioneng': product.descripcioneng,
-            'categoria_id': product.categoria_id,
-            'foto': product.foto,
-            'packagings': packaging_list,
-            'meses_produccion': [mes.mes for mes in meses_produccion],  # Lista de meses de producción
-        }
-
-        return jsonify(product=product_data), 200
+        return jsonify(products=product_list), 200
     except Exception as e:
-        # Registra el error en los registros del servidor
-        print(f"Error al obtener la información del producto en la categoría: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+        # Manejo de errores
+        return jsonify({'error': str(e)}), 500
 
 
+# Ruta para obtener la información completa de un producto por su ID y categoría por su ID
+@app.route('/categorias/<int:categoria_id>/productos/<int:producto_id>', methods=['GET'])
+def get_product_info_by_category(categoria_id, producto_id):
+    categoria = Categorias.query.get(categoria_id)
 
+    if categoria:
+        producto = Productos.query.filter_by(id=producto_id, categoria_id=categoria_id).first()
+
+        if producto:
+            # Obtener packagings del producto
+            packagings = Packagings.query.filter_by(producto_id=producto_id).all()
+
+            # Obtener meses de producción del producto
+            meses_produccion = MesesProduccion.query.filter_by(producto_id=producto_id).all()
+
+            # Crear un diccionario con la información del producto, packagings y meses de producción
+            product_info = {
+                "categoria": categoria.serialize(),
+                "producto": producto.serialize(),
+                "packagings": [packaging.serialize() for packaging in packagings],
+                "meses_produccion": [mes.serialize() for mes in meses_produccion]
+            }
+
+            return jsonify(product_info)
+        else:
+            return jsonify({"error": "Producto no encontrado en la categoría especificada"}), 404
+    else:
+        return jsonify({"error": "Categoría no encontrada"}), 404
+
+if __name__ == '__main__':
+    app.run(debug=True)
 # Ruta para eliminar un producto por su ID
 @app.route('/productos/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
@@ -614,7 +570,7 @@ def upload_packaging():
         foto = request.files['file']
 
         producto_id = request.form['producto_id']
-        user_id = request.form['user_id']
+        user_ids = request.form.getlist('user_ids')  # Cambiado de user_id a user_ids
 
         if foto and allowed_file(foto.filename):
             filename = secure_filename(foto.filename)
@@ -633,11 +589,20 @@ def upload_packaging():
                 pallet_100x120=pallet_100x120,
                 peso_neto_pallet_100x120_kg=peso_neto_pallet_100x120_kg,
                 foto=filename,
-                producto_id=producto_id,
-                user_id=user_id
+                producto_id=producto_id
             )
 
+            # Agrega nuevo_packaging a la sesión antes de operaciones relacionadas con la base de datos
             db.session.add(nuevo_packaging)
+            db.session.commit()
+
+            # Asigna los usuarios al packaging después de agregar a la sesión
+            for user_id in user_ids:
+                user = User.query.get(user_id)
+                if user:
+                    nuevo_packaging.users.append(user)
+
+            # Realiza otro commit después de agregar usuarios
             db.session.commit()
 
         return jsonify({'message': 'Carga exitosa del embalaje'}), 200
@@ -647,20 +612,22 @@ def upload_packaging():
         return jsonify({'error': 'Error interno del servidor'}), 500
 
 
+# Ruta para obtener todos los packagings
 @app.route('/packagings', methods=['GET'])
 def get_packagings():
     try:
-        # Obtén todos los packagings de la base de datos
         packagings = Packagings.query.all()
+        packaging_list = []
 
-        # Convierte los objetos Packagings a un formato serializable
-        packagings_list = []
         for packaging in packagings:
+            users = [{'id': user.id, 'username': user.username} for user in packaging.users]
+
             packaging_data = {
                 'id': packaging.id,
                 'nombreesp': packaging.nombreesp,
                 'nombreeng': packaging.nombreeng,
                 'presentacion': packaging.presentacion,
+                'calibre': packaging.calibre,
                 'peso_presentacion_g': packaging.peso_presentacion_g,
                 'peso_neto_kg': packaging.peso_neto_kg,
                 'tamano_caja': packaging.tamano_caja,
@@ -670,13 +637,12 @@ def get_packagings():
                 'peso_neto_pallet_100x120_kg': packaging.peso_neto_pallet_100x120_kg,
                 'foto': packaging.foto,
                 'producto_id': packaging.producto_id,
-                'user_id': packaging.user_id
-                # Agrega más campos según sea necesario
+                'users': users,
             }
-            packagings_list.append(packaging_data)
 
-        return jsonify({'packagings': packagings_list}), 200
+            packaging_list.append(packaging_data)
+
+        return jsonify(packagings=packaging_list), 200
     except Exception as e:
-        # Registra el error en los registros del servidor
-        print(f"Error al obtener la información de los packagings: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+        # Manejo de errores
+        return jsonify({'error': str(e)}), 500

@@ -1,7 +1,13 @@
-from app import db, Bcrypt  # Importa la instancia de SQLAlchemy desde tu aplicación
-
+from app import db, Bcrypt  # Asegúrate de importar db y Bcrypt desde tu aplicación
 
 bcrypt = Bcrypt()
+
+# Tabla de asociación para la relación many-to-many entre User y Packagings
+user_packagings = db.Table(
+    'user_packagings',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('packaging_id', db.Integer, db.ForeignKey('packagings.id'), primary_key=True)
+)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -10,6 +16,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(60), nullable=False)
     is_admin = db.Column(db.String(10), default='user')  # Cambiado a String
 
+    # Relación many-to-many con Packagings
+    packagings = db.relationship('Packagings', secondary=user_packagings, backref=db.backref('users', lazy='dynamic'))
 
     def __init__(self, username, password, is_admin=False):
         self.username = username
@@ -26,6 +34,14 @@ class User(db.Model):
     def role(self):
         return "Admin" if self.is_admin else "User"
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'role': self.role,
+            # Otros campos si es necesario
+        }
+
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -38,17 +54,25 @@ class Categorias(db.Model):
     foto = db.Column(db.String(120), nullable=False)
     productos = db.relationship('Productos', backref='categoria', cascade='all, delete-orphan')
 
-
     def __init__(self, nombreesp, nombreeng, foto):
         self.nombreesp = nombreesp
         self.nombreeng = nombreeng
         self.foto = foto
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'nombreesp': self.nombreesp,
+            'nombreeng': self.nombreeng,
+            'foto': self.foto,
+            # Otros campos si es necesario
+        }
+
     def __repr__(self):
         return f'<Categorias {self.nombreesp}>'
 
-# Modelo para los productos
 
+# Modelo para los productos
 class Productos(db.Model):
     __tablename__ = 'productos'
     id = db.Column(db.Integer, primary_key=True)
@@ -69,11 +93,23 @@ class Productos(db.Model):
         self.categoria_id = categoria_id
         self.foto = foto
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'nombreesp': self.nombreesp,
+            'nombreeng': self.nombreeng,
+            'descripcionesp': self.descripcionesp,
+            'descripcioneng': self.descripcioneng,
+            'categoria_id': self.categoria_id,
+            'foto': self.foto,
+            # Otros campos si es necesario
+        }
+
     def __repr__(self):
         return f'<Productos {self.nombreesp}>'
 
-# Modelo para los meses del año
 
+# Modelo para los meses del año
 class MesesProduccion(db.Model):
     __tablename__ = 'meses_produccion'
     id = db.Column(db.Integer, primary_key=True)
@@ -83,6 +119,14 @@ class MesesProduccion(db.Model):
     def __init__(self, mes, producto_id):
         self.mes = mes
         self.producto_id = producto_id
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'mes': self.mes,
+            'producto_id': self.producto_id,
+            # Otros campos si es necesario
+        }
 
     def __repr__(self):
         return f'<MesesProduccion {self.mes}>'
@@ -104,12 +148,10 @@ class Packagings(db.Model):
     peso_neto_pallet_100x120_kg = db.Column(db.String(80), nullable=False)
     foto = db.Column(db.String(120), nullable=False)  # Agrega esta línea para la foto
     producto_id = db.Column(db.Integer, db.ForeignKey('productos.id', name='fk_packagings_producto_id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_packagings_user_id', ondelete='CASCADE'), nullable=False)
-    user = db.relationship('User', backref='packagings')
 
-    def __init__(self, nombreesp, nombreeng, presentacion,calibre, peso_presentacion_g, peso_neto_kg,
+    def __init__(self, nombreesp, nombreeng, presentacion, calibre, peso_presentacion_g, peso_neto_kg,
                  tamano_caja, pallet_80x120, peso_neto_pallet_80x120_kg, pallet_100x120,
-                 peso_neto_pallet_100x120_kg, foto, producto_id, user_id):
+                 peso_neto_pallet_100x120_kg, foto, producto_id):
         self.nombreesp = nombreesp
         self.nombreeng = nombreeng
         self.presentacion = presentacion
@@ -123,8 +165,27 @@ class Packagings(db.Model):
         self.peso_neto_pallet_100x120_kg = peso_neto_pallet_100x120_kg
         self.foto = foto
         self.producto_id = producto_id
-        self.user_id = user_id
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'nombreesp': self.nombreesp,
+            'nombreeng': self.nombreeng,
+            'presentacion': self.presentacion,
+            'calibre': self.calibre,
+            'peso_presentacion_g': self.peso_presentacion_g,
+            'peso_neto_kg': self.peso_neto_kg,
+            'tamano_caja': self.tamano_caja,
+            'pallet_80x120': self.pallet_80x120,
+            'peso_neto_pallet_80x120_kg': self.peso_neto_pallet_80x120_kg,
+            'pallet_100x120': self.pallet_100x120,
+            'peso_neto_pallet_100x120_kg': self.peso_neto_pallet_100x120_kg,
+            'foto': self.foto,
+            'producto_id': self.producto_id,
+            'users': [user.serialize() for user in self.users],  # Agrega esta línea
+
+            # Otros campos si es necesario
+        }
 
     def __repr__(self):
         return f'<Packagings {self.nombreesp}>'
