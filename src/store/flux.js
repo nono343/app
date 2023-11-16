@@ -7,7 +7,7 @@ const getState = ({ getStore, getActions, setStore }) => {
     return {
         store: {
             token: localStorage.getItem("token") || "",
-            isLoggedIn: false,
+            isLoggedIn: Boolean(localStorage.getItem("token")), // Set isLoggedIn based on the presence of the token
             user: {
                 id: null,
                 username: '',
@@ -18,36 +18,52 @@ const getState = ({ getStore, getActions, setStore }) => {
             registerUser: async (username, password) => {
                 try {
                     const response = await axios.post("/register", { username, password, is_admin: 'admin' });
-                    console.log('Registro exitoso. Usuario:', response.data);
-
-                    localStorage.setItem("token", response.data.access_token);
-
-                    setStore({
+                    console.log('Registro exitoso. Respuesta del servidor:', response.data);
+            
+                    // Asegúrate de tener la propiedad correcta para el token
+                    const token = response.data.access_token;
+            
+                    if (typeof token !== 'string' || token.length === 0) {
+                        console.error('El token no es una cadena válida.');
+                        return;
+                    }
+            
+                    const decodedToken = jwt_decode(token);
+            
+                    await setStore({
+                        token: token,
                         isLoggedIn: true,
                         user: {
-                            id: response.data.id,
-                            username: response.data.username,
-                            is_admin: response.data.is_admin || '',
+                            id: decodedToken.sub.id,
+                            username: decodedToken.sub.username,
+                            is_admin: decodedToken.sub.is_admin || '',
                         },
                     });
-
+            
+                    localStorage.setItem("token", token);
+            
+                    // Asegúrate de que el estado se haya actualizado antes de acceder a getStore()
                     console.log('Valores del store después de registrar:', getStore().user);
                 } catch (error) {
                     console.error('Error al registrar el usuario:', error);
+                    if (error.response) {
+                        console.log('Respuesta del servidor:', error.response.data);
+                    }
                 }
             },
-
+                                    
             loginUser: async (username, password) => {
                 try {
                     const response = await axios.post("/login", { username, password });
                     const { access_token } = response.data;
-            
+
+                    // Declare and define decodedToken
                     const decodedToken = jwt_decode(access_token);
-            
-                    console.log('Decoded Token:', decodedToken.sub);  // Agrega esta línea para ver el contenido del token decodificado
-            
+
+                    console.log('Decoded Token:', decodedToken.sub);
+
                     if (decodedToken && decodedToken.sub && decodedToken.sub.username) {
-                                    // Asegúrate de que setStore sea asíncrono (retorne una promesa o sea async)
+                        // Asegúrate de que setStore sea asíncrono (retorne una promesa o sea async)
                         await setStore({
                             token: access_token,
                             isLoggedIn: true,
@@ -74,22 +90,23 @@ const getState = ({ getStore, getActions, setStore }) => {
 
             validateToken: async () => {
                 try {
-                    const token = localStorage.getItem("token");
-
+                    // Retrieve the token from the store or localStorage
+                    const token = getStore().store.token || localStorage.getItem("token");
+            
                     // Verifica si el usuario está autenticado antes de intentar validar el token
                     if (!token || token === "") {
                         console.log('El usuario no está autenticado.');
                         return;
                     }
-
+            
                     const response = await axios.get("/validate-token", {
                         headers: {
                             Authorization: `Bearer ${token}`,
                         },
                     });
-
+            
                     console.log('Información del usuario desde validate-token:', response.data);
-
+            
                     // Asegúrate de que setStore sea asíncrono (retorne una promesa o sea async)
                     await setStore({
                         isLoggedIn: true,
@@ -99,13 +116,13 @@ const getState = ({ getStore, getActions, setStore }) => {
                             is_admin: response.data.is_admin || '',
                         },
                     });
-
+            
                     // Asegúrate de que el estado se haya actualizado antes de acceder a getStore()
                     console.log('Valores del store después de validar el token:', getStore().user);
                 } catch (error) {
                     console.error('Error al validar el token:', error);
                     console.log('Respuesta del servidor:', error.response);
-
+            
                     // Manejar el error de autenticación (por ejemplo, redirigir a la página de inicio de sesión)
                     if (error.response && error.response.status === 401) {
                         // Redirige a la página de inicio de sesión
@@ -113,7 +130,7 @@ const getState = ({ getStore, getActions, setStore }) => {
                     }
                 }
             },
-
+            
             logout: async () => {
                 try {
                     const token = localStorage.getItem("token");

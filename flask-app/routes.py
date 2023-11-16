@@ -32,8 +32,14 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    # Respuesta de éxito al registro
-    return jsonify({'message': 'Usuario registrado exitosamente'}), 201  # Código 201 significa "Created"
+    # Genera un token de acceso con Flask-JWT-Extended
+    access_token = create_access_token(identity={
+        'id': new_user.id,  # Agrega el id del usuario recién registrado
+        'username': username,
+        'is_admin': new_user.is_admin
+    }, expires_delta=timedelta(days=1))
+
+    return jsonify({'message': 'Usuario registrado exitosamente', 'access_token': access_token}), 201  # Código 201 significa "Created"
 
 
 @app.route('/login', methods=['POST'])
